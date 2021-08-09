@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+# coding: utf-8
+import os
+import numpy as np
+import tensorflow as tf
+from keras.preprocessing import sequence
+from keras.preprocessing.text import Tokenizer
+from keras.models import load_model
+import pickle
+from fluency_scorer import FluencyScorer
+from Mutator import AnalogyMutator, ActiveMutator, create_sentence_candidates
+import gensim.downloader as api
+import pandas as pd
+import argparse
+
+import time
+
+from multiprocessing import Pool, Process, Queue, Manager
+import multiprocessing
+
+
+# load word2vec embedding
+print("word2vec model loading")
+word2vec = api.load("word2vec-google-news-300")
+print("word2vec model loaded")
+
+ana = AnalogyMutator("gender", model=word2vec)
+act = ActiveMutator("gender")
+
+
+def mutate_text(sentence):
+    ana_candidates, act_candidates = create_sentence_candidates(
+        sentence, ana, act)
+    candidates = list(ana_candidates) + list(act_candidates)
+    return candidates
+
+def generate_mutant():
+
+    def compute_mut():
+        '''for multiprocessing uaage'''
+        while True:
+            if not q.empty():
+                label, text = q.get()
+                candidates = mutate_text(text)
+                
+                if len(candidates) > 0:
+                    original = [text] * len(candidates)
+                    label = [label] * len(candidates)
+                    mutant = candidates
+                    q_to_store.put((
+                        original, label, mutant
+                    ))
+            else:
+                print("Finished")
+                # return
+                break
+
+    fpath = f"./asset/imdb/test.csv"
+
+    df = pd.read_csv(fpath, names=["label", "sentence"], sep="\t")
+
+    # df = df[:10]
+
+    start = time.time()
+
+    originals = []
+    mutants = []
+    labels = []
+    
+    i = 0
+
+    manager = multiprocessing.Manager()
+
+    q = manager.Queue()
+    q_to_store = manager.Queue()
+
+    for index, row in df.iterrows():
+        label = row["label"]
+        text = row["sentence"]
+
+        q.put((label, text))
+
+    numList = []
+    ## they use http://api.conceptnet.io for the mutation engine that limit the api request
+    ## thus we can not use multiprocessing
+    for i in range(1): 
+        p = multiprocessing.Process(target=compute_mut, args=())
+        numList.append(p)
+        p.start()
+
+    for i in numList:
+        i.join()
+
+    print("Generation Process finished.")
+
+    while not q_to_store.empty():
+        original, label, mutant = q_to_store.get()
+        originals.extend(original)
+        labels.extend(label)
+        mutants.extend(mutant)
+        
+    end = time.time()
+    print("Execution Time: ", end-start)
+
+    dm = pd.DataFrame(data={"label": labels, "mutant": mutants, "original": originals})
+
+    dm = dm.drop_duplicates()
+
+    
+    output_dir = f"./mutant/imdb/"
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    dm.to_csv(output_dir + "test.csv", index=None, header=None, sep="\t")
+
+
+if __name__ == "__main__" :
+    generate_mutant()
