@@ -1,8 +1,10 @@
 # MT-NLP
 
+Forked from [https://github.com/pckennethma/MT-NLP](https://github.com/pckennethma/MT-NLP)
+
 Implementation of paper ["Metamorphic Testing and Certified Mitigation of Fairness Violations in NLP Models"](https://www.ijcai.org/Proceedings/2020/64). Pingchuan Ma, Shuai Wang, and Jin Liu. In Proceedings of the 29th International Joint Conference on Artificial Intelligence (IJCAI '20), 2020.
 
-Please cite as:
+Please cite the original work:
 
 ```bibtex
 @incollection{mtnlp,
@@ -30,6 +32,22 @@ Note that all codes are written in Python 3.6. Please download the [file](https:
 Since Stanford Corenlp is one of our dependencies, `jdk` is required.
 In addition, to evaluate the fluency score of mutations, please follow the instruction of [pytorch-human-performance-gec](https://github.com/rgcottrell/pytorch-human-performance-gec) to install dependencies.
 
+### prepare the environment using docker 
+
+```
+docker pull tensorflow/tensorflow:1.8.0-devel-gpu-py3
+docker run --name gpu1-mtnlp --rm --gpus '"device=1"' -it  -v  <path-to MT-NLP cloned dir>:/MT-NLP/ tensorflow/tensorflow:1.13.2-devel-gpu-py3
+cd MT-NLP
+pip install -r requirements.txt
+python -m gensim.downloader --download word2vec-google-news-300
+python -c "import nltk; nltk.download('wordnet')"
+
+
+# install java for stanfordcorenlp
+apt-get update
+apt-get upgrade
+apt-get install openjdk-8-jre
+```
 # Demo
 
 ## Usage
