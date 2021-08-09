@@ -4,6 +4,7 @@ import numpy as np
 from fairseq import data, tasks, tokenizer, utils
 from fairseq.sequence_scorer import SequenceScorer
 
+
 class FluencyArgs(dict):
     """Encapsulate args to build FluencyScorer."""
 
@@ -53,9 +54,10 @@ class FluencyScorer(object):
         self.args = FluencyArgs(path, data)
         self.task = tasks.setup_task(self.args)
         self.use_cuda = torch.cuda.is_available and not use_cpu
-
+        
         # Load language model ensemble.
-        models, model_args = utils.load_ensemble_for_inference(self.args.path.split(':'), self.task)
+        models, model_args = utils.load_ensemble_for_inference(
+            self.args.path.split(':'), self.task)
         self.models = models
         self.model_args = model_args
 
@@ -72,7 +74,8 @@ class FluencyScorer(object):
 
     def score_sentence(self, line):
         # Tokenize the input sentence into a batch of size one.
-        tokens = tokenizer.Tokenizer.tokenize(line, self.task.dictionary, add_if_not_exist=False).long()
+        tokens = tokenizer.Tokenizer.tokenize(
+            line, self.task.dictionary, add_if_not_exist=False).long()
         lengths = np.array([tokens.numel()])
         ds = data.TokenBlockDataset(tokens, lengths, self.args.tokens_per_sample, pad=self.task.dictionary.pad(),
                                     eos=self.task.dictionary.eos(), break_mode=self.args.sample_break_mode,
@@ -101,7 +104,8 @@ class FluencyScorer(object):
                 # Ignore words with infinite probability. This can happen when
                 # running low-precision inference on the GPU.
                 pos_scores = hypo['positional_scores']
-                word_prob = [score for score in pos_scores if score != float('-inf') and score != float('inf')]
+                word_prob = [score for score in pos_scores if score != float(
+                    '-inf') and score != float('inf')]
                 return self._fluency_score(word_prob)
         return 0.0
 

@@ -22,7 +22,7 @@ class ActiveMutator:
             return {"gay", "lesbian", "bisexual"}
 
     def create_active_candidates(self, token: str):
-        return {f'{adj} {token}' for adj in self.identify_group}
+        return {f"{adj} {token}" for adj in self.identify_group}
 
 
 class AnalogyMutator:
@@ -33,7 +33,7 @@ class AnalogyMutator:
     def __init__(self, sensitive_attribute, enable_pre_fetch=False, model=None):
         self.sensitive_attribute = sensitive_attribute
         if sensitive_attribute == 'gender':
-            
+
             self.model = model
             self.dist = lambda x, y: np.sum((x-y)**2)
             self.pre_fetch = {}
@@ -44,8 +44,8 @@ class AnalogyMutator:
                         self.pre_fetch[l[0]] = l[1]
                         self.pre_fetch[l[1]] = l[0]
 
-    def create_analogy_candidates(self, token: str, strict_mode = False):
-        
+    def create_analogy_candidates(self, token: str, strict_mode=False):
+
         if self.sensitive_attribute == 'gender':
             if token not in self.model:
                 return set()
@@ -53,19 +53,22 @@ class AnalogyMutator:
                 return {self.pre_fetch[token]}
             # 1 denotes male, 0 denotes female
             gender = 1 if self.dist(self.model[token], self.model["male"]) < \
-                          self.dist(self.model[token], self.model["female"]) else 0
+                self.dist(self.model[token], self.model["female"]) else 0
             # in this implementation we empirically enforce i[1]>0.7
             if gender == 1:
                 candidates1 = {i[0].lower() for i in
-                               self.model.most_similar(positive=["woman", token], negative=["man"])
-                               if i[1]>.7}
+                               self.model.most_similar(
+                                   positive=["woman", token], negative=["man"])
+                               if i[1] > .7}
             else:
                 candidates1 = {i[0].lower() for i in
-                               self.model.most_similar(positive=["man", token], negative=["woman"])
-                               if i[1]>.7}
-            
+                               self.model.most_similar(
+                                   positive=["man", token], negative=["woman"])
+                               if i[1] > .7}
+
             # strict mode, enhance candidate by incroporating KG
-            candidates2 = AnalogyMutator.antonym(token) | AnalogyMutator.formof(token) if strict_mode else candidates1
+            candidates2 = AnalogyMutator.antonym(token) | AnalogyMutator.formof(
+                token) if strict_mode else candidates1
 
             if len(candidates1 & candidates2) != 0:
                 AnalogyMutator.analogy_mutation[token] = candidates1 & candidates2
@@ -82,17 +85,21 @@ class AnalogyMutator:
             return antonym_cache[start]
         for i in range(3):
             try:
-                response = requests.get(f'{base_url}/query?start={start}&rel=/r/Antonym')
+                response = requests.get(
+                    f'{base_url}/query?start={start}&rel=/r/Antonym')
                 obj = response.json()
                 edges = obj['edges']
                 if edges:
-                    end_nodes = [edge['end']['@id'] for edge in edges if edge['weight'] >= 1]
-                    antonym_cache[start] = set([n.split("/")[3] for n in end_nodes])
+                    end_nodes = [edge['end']['@id']
+                                 for edge in edges if edge['weight'] >= 1]
+                    antonym_cache[start] = set(
+                        [n.split("/")[3] for n in end_nodes])
                     return antonym_cache[start]
                 else:
                     return set()
             except Exception as e:
-                print(f'Query on {start} of Antonym edge failed {["once", "twice", "three times"][i]}.', e)
+                print(
+                    f'Query on {start} of Antonym edge failed {["once", "twice", "three times"][i]}.', e)
         print(f'Query on {start} of Antonym edge failed.')
         return set()
 
@@ -104,37 +111,45 @@ class AnalogyMutator:
             return formOf_cache[start]
         for i in range(3):
             try:
-                response = requests.get(f'{base_url}/query?start={start}&rel=/r/FormOf')
+                response = requests.get(
+                    f'{base_url}/query?start={start}&rel=/r/FormOf')
                 obj = response.json()
                 edges = obj['edges']
                 if edges:
-                    end_nodes = [edge['end']['@id'] for edge in edges if edge['weight'] >= 1]
-                    formOf_cache[start] = set([n.split("/")[3] for n in end_nodes])
+                    end_nodes = [edge['end']['@id']
+                                 for edge in edges if edge['weight'] >= 1]
+                    formOf_cache[start] = set(
+                        [n.split("/")[3] for n in end_nodes])
                     return formOf_cache[start]
                 else:
                     return set()
             except Exception as e:
-                print(f'Query on {start} of FormOf edge failed {["once", "twice", "three times"][i]}.', e)
+                print(
+                    f'Query on {start} of FormOf edge failed {["once", "twice", "three times"][i]}.', e)
         print(f'Query on {start} of FormOf edge failed.')
         return set()
 
 
 isA_cache = dict()
 
+
 def isa(start="", limit=10):
     if start in isA_cache:
         return isA_cache[start]
     for i in range(3):
         try:
-            response = requests.get(f'{base_url}/query?start={start}&rel=/r/IsA&limit={limit}')
+            response = requests.get(
+                f'{base_url}/query?start={start}&rel=/r/IsA&limit={limit}')
             obj = response.json()
             edges = obj['edges']
-            end_nodes = [edge['end']['@id'] for edge in edges if edge['weight'] >= 1]
+            end_nodes = [edge['end']['@id']
+                         for edge in edges if edge['weight'] >= 1]
             isA_cache[start] = ["/".join(n.split("/")[:4]) for n in end_nodes]
             return isA_cache[start]
         except Exception as e:
             print()
-            print(f'Query on {start} of IsA edge failed {["once", "twice", "three times"][i]}.', e)
+            print(
+                f'Query on {start} of IsA edge failed {["once", "twice", "three times"][i]}.', e)
     print(f'Query on {start} of IsA edge failed.')
     return []
 
@@ -155,7 +170,8 @@ def check_human(token, debug=False):
             if w not in visited:
                 visited.add(w)
                 end_nodes = isa(start=w, limit=30)
-                if debug: print(w, end_nodes)
+                if debug:
+                    print(w, end_nodes)
                 if len(no_human_indicator & set(end_nodes)) > 0:
                     return False
                 if len(human_indicator & set(end_nodes)) > 0:
@@ -167,6 +183,7 @@ def check_human(token, debug=False):
         tokens = next_round_token
     return False
 
+
 def make_mutation(pos, replacement, index):
     s = ""
     for i in range(len(pos)):
@@ -176,12 +193,13 @@ def make_mutation(pos, replacement, index):
             s += pos[i][0] + " "
     return s
 
+
 # word tagging and singularize
 lemmatizer = ns.WordNetLemmatizer()
 print("stanford corenlp model loading")
 nlp = StanfordCoreNLP('dependency/stanford-corenlp-full-2018-10-05')
 print("stanford corenlp model loaded")
-part_of_speech = lambda x: nlp.pos_tag(x.strip())
+def part_of_speech(x): return nlp.pos_tag(x.strip())
 
 
 def create_sentence_candidates(sentence: str, ana, act):
@@ -201,8 +219,8 @@ def create_sentence_candidates(sentence: str, ana, act):
     for token, tag, index in human_token:
         if act is not None and index == 0 or pos[index-1][1] not in {'NN', 'JJ', 'JJR', 'JJS'}:
             act_candidates |= {make_mutation(pos, replacement, index)
-                                for replacement in act.create_active_candidates(token)
-                                if replacement is not None}
+                               for replacement in act.create_active_candidates(token)
+                               if replacement is not None}
 
         if tag == 'NNS':
             word = lemmatizer.lemmatize(token.lower(), 'n')
@@ -211,10 +229,11 @@ def create_sentence_candidates(sentence: str, ana, act):
 
         if act is not None:
             ana_candidates |= {make_mutation(pos, replacement, index)
-                                for replacement in ana.create_analogy_candidates(word)
-                                if replacement is not None}
+                               for replacement in ana.create_analogy_candidates(word)
+                               if replacement is not None}
 
     return ana_candidates, act_candidates
+
 
 if __name__ == "__main__":
     import gensim.downloader as api
@@ -226,11 +245,10 @@ if __name__ == "__main__":
     with open("word_pairs.txt") as wp:
         for l in wp.readlines():
             l = l.strip().split()
-            pair_list.append((l[0],l[1]))
+            pair_list.append((l[0], l[1]))
     for p in pair_list:
         print(p[0], ana.create_analogy_candidates(p[0]))
         print(p[1], ana.create_analogy_candidates(p[1]))
     while True:
         s = input()
         print(ana.create_analogy_candidates(s))
-    

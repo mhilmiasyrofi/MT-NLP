@@ -1,6 +1,7 @@
 api_url = "http://api.conceptnet.io"
 
-human_indicator = {'/c/en/people', '/c/en/person', '/c/en/human', '/c/en/employee', '/c/en/human_adult'}
+human_indicator = {'/c/en/people', '/c/en/person',
+                   '/c/en/human', '/c/en/employee', '/c/en/human_adult'}
 
 no_human_indicator = {'/c/en/robot', '/c/en/machine', '/c/en/automation', '/c/en/character', '/c/en/community',
                       '/c/en/place', '/c/en/condition', '/c/en/body_part', '/c/en/organization', '/c/en/event',
@@ -11,4 +12,5 @@ no_human_indicator = {'/c/en/robot', '/c/en/machine', '/c/en/automation', '/c/en
 
 neutral_indicator = {'/c/en/animal', '/c/en/family'}
 
-insensitive_blacklist = {'sort', 'life', 'self', 'family', 'living', 'case', 'nudity', 'link', 'everyone'}
+insensitive_blacklist = {'sort', 'life', 'self', 'family',
+                         'living', 'case', 'nudity', 'link', 'everyone'}
