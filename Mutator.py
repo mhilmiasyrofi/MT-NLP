@@ -9,7 +9,6 @@ import nltk.stem as ns
 # config api url
 base_url = api_url
 
-
 class ActiveMutator:
     def __init__(self, sensitive_attribute):
         self.sensitive_attribute = sensitive_attribute
@@ -48,9 +47,9 @@ class AnalogyMutator:
 
         if self.sensitive_attribute == 'gender':
             if token not in self.model:
-                return set()
+                return set(), []
             if token in self.pre_fetch:
-                return {self.pre_fetch[token]}
+                return {self.pre_fetch[token]}, []
             # 1 denotes male, 0 denotes female
             gender = 1 if self.dist(self.model[token], self.model["male"]) < \
                 self.dist(self.model[token], self.model["female"]) else 0
@@ -70,12 +69,18 @@ class AnalogyMutator:
             candidates2 = AnalogyMutator.antonym(token) | AnalogyMutator.formof(
                 token) if strict_mode else candidates1
 
-            if len(candidates1 & candidates2) != 0:
-                AnalogyMutator.analogy_mutation[token] = candidates1 & candidates2
-                return candidates1 & candidates2
+            candidates_intersection = candidates1 & candidates2
+
+            if len(candidates_intersection) != 0:
+                AnalogyMutator.analogy_mutation[token] = candidates_intersection
+                # gender is the gender from the original text
+                # we need to inverse the gender for mutants
+                mutant_genders = ["female"] * len(candidates_intersection) if gender == 1 else [
+                    "male"] * len(candidates_intersection)
+                return candidates_intersection, mutant_genders
             else:
-                return set()
-        return set()
+                return set(), []
+        return set(), []
 
     @staticmethod
     def antonym(token: str):
@@ -194,6 +199,25 @@ def make_mutation(pos, replacement, index):
     return s
 
 
+def make_template(pos, replacement, index):
+    s = ""
+    for i in range(len(pos)):
+        if i == index:
+            s += "<replaced>" + " "
+        else:
+            s += pos[i][0] + " "
+    return s
+
+
+def make_original(pos):
+    s = ""
+    for i in range(len(pos)):
+        s += pos[i][0] + " "
+    return s
+
+def get_act_identifier(act_replacement):
+    return act_replacement.split(" ")[0]
+
 # word tagging and singularize
 lemmatizer = ns.WordNetLemmatizer()
 print("stanford corenlp model loading")
@@ -203,10 +227,17 @@ def part_of_speech(x): return nlp.pos_tag(x.strip())
 
 
 def create_sentence_candidates(sentence: str, ana, act):
-    ana_candidates = set()
-    act_candidates = set()
+
+    ana_candidates = list()
+    ana_templates = list()
+    ana_identifiers = list()
+
+    act_candidates = list()
+    act_templates = list()
+    act_identifiers = list()
 
     pos = part_of_speech(sentence)
+    original_text = make_original(pos)
     human_token = []
     for temp, index in zip(pos, range(len(pos))):
         token, tag = temp
@@ -218,21 +249,41 @@ def create_sentence_candidates(sentence: str, ana, act):
 
     for token, tag, index in human_token:
         if act is not None and index == 0 or pos[index-1][1] not in {'NN', 'JJ', 'JJR', 'JJS'}:
-            act_candidates |= {make_mutation(pos, replacement, index)
-                               for replacement in act.create_active_candidates(token)
-                               if replacement is not None}
+
+            act_replacement_candidates = act.create_active_candidates(token)
+
+            act_candidates.extend([make_mutation(pos, replacement, index)
+                               for replacement in act_replacement_candidates
+                               if replacement is not None])
+
+            act_templates.extend([make_template(pos, replacement, index)
+                              for replacement in act_replacement_candidates
+                              if replacement is not None])
+            
+            act_identifiers.extend([get_act_identifier(replacement)
+                                for replacement in act_replacement_candidates
+                                if replacement is not None])
 
         if tag == 'NNS':
             word = lemmatizer.lemmatize(token.lower(), 'n')
         else:
             word = token.lower()
 
-        if act is not None:
-            ana_candidates |= {make_mutation(pos, replacement, index)
-                               for replacement in ana.create_analogy_candidates(word)
-                               if replacement is not None}
+        if ana is not None:
+            ana_replacement_candidates, identifiers = ana.create_analogy_candidates(word)
+            
+            ana_candidates.extend([make_mutation(pos, replacement, index)
+                               for replacement in ana_replacement_candidates
+                               if replacement is not None])
 
-    return ana_candidates, act_candidates
+            ana_templates.extend([make_template(pos, replacement, index)
+                               for replacement in ana_replacement_candidates
+                               if replacement is not None])
+
+            ana_identifiers.extend(identifiers)
+
+    return {"mutant": ana_candidates + act_candidates, "template": ana_templates + act_templates, "identifier": ana_identifiers + act_identifiers, "original": [original_text] * (len(ana_identifiers)+len(act_identifiers)), "type": ( ["ana"] * len(ana_identifiers)) + (["act"]* len(act_identifiers)) }
+            
 
 
 if __name__ == "__main__":

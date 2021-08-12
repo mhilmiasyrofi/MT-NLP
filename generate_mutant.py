@@ -29,26 +29,28 @@ act = ActiveMutator("gender")
 
 
 def mutate_text(sentence):
-    ana_candidates, act_candidates = create_sentence_candidates(
+    output = create_sentence_candidates(
         sentence, ana, act)
-    candidates = list(ana_candidates) + list(act_candidates)
-    return candidates
+    return output
 
 def generate_mutant():
 
-    def compute_mut():
+    def execute_mut():
         '''for multiprocessing uaage'''
         while True:
             if not q.empty():
                 label, text = q.get()
-                candidates = mutate_text(text)
+                output = mutate_text(text)
                 
-                if len(candidates) > 0:
-                    original = [text] * len(candidates)
-                    label = [label] * len(candidates)
-                    mutant = candidates
+                if len(output) > 0:
+                    original = output["original"]
+                    label = [label] * len(output["original"])
+                    mutant = output["mutant"]
+                    template = output["template"]
+                    identifier = output["identifier"]
+                    type = output["type"]
                     q_to_store.put((
-                        original, label, mutant
+                        original, label, mutant, template, identifier, type
                     ))
             else:
                 print("Finished")
@@ -59,13 +61,16 @@ def generate_mutant():
 
     df = pd.read_csv(fpath, names=["label", "sentence"], sep="\t")
 
-    # df = df[:10]
+    # df = df[:20]
 
     start = time.time()
 
     originals = []
     mutants = []
     labels = []
+    templates = []
+    identifiers = []
+    types = []
     
     i = 0
 
@@ -84,7 +89,7 @@ def generate_mutant():
     ## they use http://api.conceptnet.io for the mutation engine that limit the api request
     ## thus we can not use multiprocessing
     for i in range(1): 
-        p = multiprocessing.Process(target=compute_mut, args=())
+        p = multiprocessing.Process(target=execute_mut, args=())
         numList.append(p)
         p.start()
 
@@ -94,18 +99,22 @@ def generate_mutant():
     print("Generation Process finished.")
 
     while not q_to_store.empty():
-        original, label, mutant = q_to_store.get()
+        original, label, mutant, template, identifier, type = q_to_store.get()
         originals.extend(original)
         labels.extend(label)
         mutants.extend(mutant)
+        templates.extend(template)
+        identifiers.extend(identifier)
+        types.extend(type)
         
     end = time.time()
     print("Execution Time: ", end-start)
 
-    dm = pd.DataFrame(data={"label": labels, "mutant": mutants, "original": originals})
+    dm = pd.DataFrame(data={"label": labels, "mutant": mutants, "original": originals, "template": templates, "identifier": identifiers, "type":types})
 
     dm = dm.drop_duplicates()
 
+    # ["label", "mutant", "original", "template","identifier", "type"]
     
     output_dir = f"./mutant/imdb/"
 
