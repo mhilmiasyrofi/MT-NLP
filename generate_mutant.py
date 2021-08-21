@@ -57,7 +57,9 @@ def generate_mutant():
                 # return
                 break
 
-    fpath = f"./asset/imdb/test.csv"
+    task = "twitter_s140"
+    
+    fpath = f"./asset/{task}/test.csv"
 
     df = pd.read_csv(fpath, names=["label", "sentence"], sep="\t")
 
@@ -116,7 +118,7 @@ def generate_mutant():
 
     # ["label", "mutant", "original", "template","identifier", "type"]
     
-    output_dir = f"./mutant/imdb/"
+    output_dir = f"./mutant/{task}/"
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
