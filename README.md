@@ -35,8 +35,8 @@ In addition, to evaluate the fluency score of mutations, please follow the instr
 ### prepare the environment using docker 
 
 ```
-docker pull tensorflow/tensorflow:1.8.0-devel-gpu-py3
-docker run --name gpu1-mtnlp --rm --gpus '"device=1"' -it  -v  <path-to MT-NLP cloned dir>:/MT-NLP/ tensorflow/tensorflow:1.13.2-devel-gpu-py3
+docker pull tensorflow/tensorflow:1.13.2-gpu-py3
+docker run --name gpu1-mtnlp --rm --gpus '"device=1"' -it  -v  <path-to MT-NLP cloned dir>:/MT-NLP/ tensorflow/tensorflow:1.13.2-gpu-py3
 cd MT-NLP
 pip install -r requirements.txt
 python -m gensim.downloader --download word2vec-google-news-300
