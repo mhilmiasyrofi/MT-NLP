@@ -19,6 +19,13 @@ class ActiveMutator:
             return {"female", "male"}
         if self.sensitive_attribute == 'lgbt':
             return {"gay", "lesbian", "bisexual"}
+        if self.sensitive_attribute == 'country':
+            return {"Afghan", "Australian", "Belgian", "Brazilian", 
+                    "Canadian", "Czech", "Finnish", "Greek", 
+                    "Hungarian", "Indian", "Iranian", "Irish", 
+                    "Israeli", "Latvian", "Norwegian", "Polish", 
+                    "Romanian", "Slovenian", "Somali", "Swedish", 
+                    "Dutch", "Turkish", "the UK", "the US", "Ukrainian"}
 
     def create_active_candidates(self, token: str):
         return {f"{adj} {token}" for adj in self.identify_group}
