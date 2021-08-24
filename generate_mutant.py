@@ -24,8 +24,13 @@ print("word2vec model loading")
 word2vec = api.load("word2vec-google-news-300")
 print("word2vec model loaded")
 
-ana = AnalogyMutator("gender", model=word2vec)
-act = ActiveMutator("gender")
+# sensitive_attribute = "gender"
+sensitive_attribute = "country"
+
+ana = AnalogyMutator(sensitive_attribute, model=word2vec)
+act = ActiveMutator(sensitive_attribute)
+
+print("Sensitive attribute: ", sensitive_attribute)
 
 
 def mutate_text(sentence):
@@ -58,6 +63,9 @@ def generate_mutant():
                 break
 
     task = "twitter_s140"
+    task = "imdb"
+
+    print("Task: ", task)
     
     fpath = f"./asset/{task}/test.csv"
 
@@ -118,7 +126,7 @@ def generate_mutant():
 
     # ["label", "mutant", "original", "template","identifier", "type"]
     
-    output_dir = f"./mutant/{task}/"
+    output_dir = f"./mutant/{sensitive_attribute}/{task}/"
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
