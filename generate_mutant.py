@@ -19,26 +19,37 @@ from multiprocessing import Pool, Process, Queue, Manager
 import multiprocessing
 
 
-# load word2vec embedding
-print("word2vec model loading")
-word2vec = api.load("word2vec-google-news-300")
-print("word2vec model loaded")
-
-# sensitive_attribute = "gender"
-sensitive_attribute = "country"
-
-ana = AnalogyMutator(sensitive_attribute, model=word2vec)
-act = ActiveMutator(sensitive_attribute)
-
-print("Sensitive attribute: ", sensitive_attribute)
-
-
-def mutate_text(sentence):
-    output = create_sentence_candidates(
-        sentence, ana, act)
-    return output
-
 def generate_mutant():
+
+    args = get_args()
+    sensitive_attribute = args.sensitive_attribute
+    task = args.task
+    print("=======")
+    print("Sensitive attribute: ", sensitive_attribute)
+    print("Task: ", task)
+    print("=======")
+
+
+
+    # load word2vec embedding
+    print("word2vec model loading")
+    word2vec = api.load("word2vec-google-news-300")
+    print("word2vec model loaded")
+
+    
+    # sensitive_attribute = "gender"
+    # sensitive_attribute = "country"
+    
+
+    ana = AnalogyMutator(sensitive_attribute, model=word2vec)
+    act = ActiveMutator(sensitive_attribute)
+
+    
+
+    def mutate_text(sentence):
+        output = create_sentence_candidates(
+            sentence, ana, act)
+        return output
 
     def execute_mut():
         '''for multiprocessing uaage'''
@@ -62,10 +73,9 @@ def generate_mutant():
                 # return
                 break
 
-    task = "twitter_s140"
-    task = "imdb"
+    # task = "twitter_s140"
+    # task = "imdb"
 
-    print("Task: ", task)
     
     fpath = f"./asset/{task}/test.csv"
 
@@ -133,6 +143,13 @@ def generate_mutant():
 
     dm.to_csv(output_dir + "test.csv", index=None, header=None, sep="\t")
 
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sensitive-attribute', default="gender", type=str)
+    parser.add_argument('--task', default="imdb", type=str, help='dataset for generating mutants')
+    
+    return parser.parse_args()
 
 if __name__ == "__main__" :
     generate_mutant()
